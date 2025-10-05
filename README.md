@@ -20,7 +20,7 @@ A lightweight **FastAPI web service** to dynamically show **emotes (emoji, PNG, 
 
 ```bash
 cd /opt
-sudo git clone <your-repo-url> emote-service
+sudo git clone https://github.com/MeisterFopper/emote-service.git
 cd emote-service
 ```
 
