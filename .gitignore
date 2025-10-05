@@ -1,0 +1,37 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtualenv ---
+venv/
+.env
+.venv/
+ENV/
+env/
+ENV*/
+
+# --- Logs ---
+*.log
+*.log.*
+*.pid
+*.gz
+
+# --- Systemd / Runtime ---
+*.sock
+*.pid
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+*.swp
+*~
+
+# --- OS / Misc ---
+.DS_Store
+Thumbs.db
+
+# --- Build / Dist ---
+build/
+dist/
+*.egg-info/

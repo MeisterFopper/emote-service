@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #emote { transition: opacity 0.3s ease-in-out; }
+    img { object-fit: contain; max-height:90vh; max-width:90vw; }
+  </style>
+</head>
+<body>
+  <div id="emote">{{ content|safe }}</div>
+  <script src="/static/emote.js"></script>
+</body>
+</html>
