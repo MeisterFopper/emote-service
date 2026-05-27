@@ -1,21 +1,23 @@
 import os
+from typing import List
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel, Field
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
-emotes = {}
+emotes: dict[str, List[str]] = {}
 API_TOKEN = os.getenv("EMOTE_API_TOKEN")
 
 
 class EmoteRequest(BaseModel):
-    emote: str
+    emotes: List[str] = Field(min_length=1, max_length=5)
 
 
 def check_token(request: Request):
@@ -26,11 +28,36 @@ def check_token(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
+def normalize_emotes(values: List[str]) -> List[str]:
+    cleaned = []
+    for value in values:
+        if value is None:
+            continue
+        item = str(value).strip()
+        if not item:
+            continue
+        cleaned.append(item)
+
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="No valid emotes provided")
+
+    if len(cleaned) > 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 emotes allowed")
+
+    return cleaned
+
+
 @app.post("/emote/{user_id}")
 async def set_emote(user_id: str, data: EmoteRequest, request: Request):
     check_token(request)
-    emotes[user_id] = data.emote
-    return {"status": "ok", "user": user_id, "emote": "set"}
+    cleaned = normalize_emotes(data.emotes)
+    emotes[user_id] = cleaned
+    return {
+        "status": "ok",
+        "user": user_id,
+        "count": len(cleaned),
+        "emotes": cleaned
+    }
 
 
 @app.delete("/emote/{user_id}")
@@ -44,20 +71,12 @@ async def delete_emote(user_id: str, request: Request):
 
 @app.get("/emote/{user_id}/raw")
 async def get_emote_raw(user_id: str):
-    return {"emote": emotes.get(user_id, "")}
+    return {"emotes": emotes.get(user_id, [])}
 
 
 @app.get("/emote/{user_id}", response_class=HTMLResponse)
 async def get_emote(user_id: str, request: Request):
-    emote = emotes.get(user_id, "")
-    if emote:
-        if emote.startswith("http") or emote.startswith("data:image/"):
-            content = f'<img src="{emote}" style="max-height:90vh;max-width:90vw;object-fit:contain;" />'
-        else:
-            content = f'<span style="font-size:6rem">{emote}</span>'
-    else:
-        content = ""
     return templates.TemplateResponse(
         "emote.html",
-        {"request": request, "content": content}
+        {"request": request}
     )

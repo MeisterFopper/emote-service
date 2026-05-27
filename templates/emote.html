@@ -3,20 +3,162 @@
 <head>
   <meta charset="utf-8">
   <style>
+    :root {
+      --transition-fast: 220ms ease;
+      --transition-normal: 320ms ease;
+      --gap: 2vw;
+      --shadow: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35));
+    }
+
     html, body {
+      width: 100%;
       height: 100%;
       margin: 0;
       background: transparent;
+      overflow: hidden;
+    }
+
+    body {
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    #emote { transition: opacity 0.3s ease-in-out; }
-    img { object-fit: contain; max-height:90vh; max-width:90vw; }
+
+    .emote-stage {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--gap);
+      width: 94vw;
+      max-width: 94vw;
+      min-height: 24vh;
+      opacity: 1;
+      transform: scale(1);
+      transition:
+        opacity var(--transition-fast),
+        transform var(--transition-fast);
+      will-change: opacity, transform;
+    }
+
+    .emote-stage.fade-out {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+
+    .emote-stage.fade-in {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .emote-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 1 auto;
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      animation: item-enter var(--transition-normal);
+      filter: var(--shadow);
+    }
+
+    .emote-media {
+      display: block;
+      object-fit: contain;
+      max-width: 100%;
+      max-height: 100%;
+      user-select: none;
+      -webkit-user-drag: none;
+      image-rendering: auto;
+    }
+
+    .emote-text {
+      display: inline-block;
+      line-height: 1;
+      white-space: nowrap;
+      user-select: none;
+      text-rendering: optimizeLegibility;
+    }
+
+    .emote-stage.count-1 { gap: 0; }
+    .emote-stage.count-2 { gap: 2vw; }
+    .emote-stage.count-3 { gap: 1.8vw; }
+    .emote-stage.count-4 { gap: 1.5vw; }
+    .emote-stage.count-5 { gap: 1.2vw; }
+
+    .emote-item.count-1 {
+      max-width: 88vw;
+      max-height: 82vh;
+    }
+    .emote-item.count-1 .emote-media {
+      max-width: 88vw;
+      max-height: 82vh;
+    }
+    .emote-item.count-1 .emote-text {
+      font-size: min(24vw, 18rem);
+    }
+
+    .emote-item.count-2 {
+      max-width: 42vw;
+      max-height: 62vh;
+    }
+    .emote-item.count-2 .emote-media {
+      max-width: 42vw;
+      max-height: 62vh;
+    }
+    .emote-item.count-2 .emote-text {
+      font-size: min(16vw, 12rem);
+    }
+
+    .emote-item.count-3 {
+      max-width: 28vw;
+      max-height: 50vh;
+    }
+    .emote-item.count-3 .emote-media {
+      max-width: 28vw;
+      max-height: 50vh;
+    }
+    .emote-item.count-3 .emote-text {
+      font-size: min(11vw, 9rem);
+    }
+
+    .emote-item.count-4 {
+      max-width: 21vw;
+      max-height: 42vh;
+    }
+    .emote-item.count-4 .emote-media {
+      max-width: 21vw;
+      max-height: 42vh;
+    }
+    .emote-item.count-4 .emote-text {
+      font-size: min(8.5vw, 7rem);
+    }
+
+    .emote-item.count-5 {
+      max-width: 17vw;
+      max-height: 36vh;
+    }
+    .emote-item.count-5 .emote-media {
+      max-width: 17vw;
+      max-height: 36vh;
+    }
+    .emote-item.count-5 .emote-text {
+      font-size: min(7vw, 5.5rem);
+    }
+
+    @keyframes item-enter {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.92);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
   </style>
 </head>
 <body>
-  <div id="emote">{{ content|safe }}</div>
+  <div id="emote" class="emote-stage count-1"></div>
   <script src="/static/emote.js"></script>
 </body>
 </html>

@@ -1,0 +1,161 @@
+Hier ist eine kompakte Zusammenfassung deiner gesamten Einrichtung, so dass du alles in einem Blick hast und später leicht reproduzieren kannst 🚀
+________________________________________
+🔧 Server & User
+1.	Eigenen Systemuser anlegen
+sudo adduser emotesvc
+sudo usermod -s /usr/sbin/nologin emotesvc   # optional: kein Login
+2.	Verzeichnis für die App
+sudo mkdir /opt/emote-service
+sudo chown emotesvc:emotesvc /opt/emote-service
+________________________________________
+🐍 Python-App
+1.	Virtuelle Umgebung + Pakete
+sudo apt install python3-venv -y
+sudo -u emotesvc bash
+cd /opt/emote-service
+python3 -m venv venv
+source venv/bin/activate
+pip install fastapi uvicorn
+2.	app.py erstellen
+import os
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+
+app = FastAPI()
+emotes = {}
+API_TOKEN = os.getenv("EMOTE_API_TOKEN")
+
+class EmoteRequest(BaseModel):
+    emote: str
+
+def check_token(request: Request):
+    token = request.headers.get("X-API-Key")
+    if API_TOKEN and token != API_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+@app.post("/emote/{user_id}")
+async def set_emote(user_id: str, data: EmoteRequest, request: Request):
+    check_token(request)
+    emotes[user_id] = data.emote
+    return {"status": "ok", "user": user_id, "emote": "set"}
+
+@app.delete("/emote/{user_id}")
+async def delete_emote(user_id: str, request: Request):
+    check_token(request)
+    if user_id in emotes:
+        del emotes[user_id]
+        return {"status": "deleted", "user": user_id}
+    raise HTTPException(status_code=404, detail="User not found")
+
+@app.get("/emote/{user_id}", response_class=HTMLResponse)
+async def get_emote(user_id: str):
+    emote = emotes.get(user_id, "🙂")
+    if emote.startswith("http") or emote.startswith("data:image/"):
+        content = f'<img src="{emote}" style="max-height:90vh;max-width:90vw;" />'
+    else:
+        content = f'<span style="font-size:6rem">{emote}</span>'
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body {{
+            margin:0;background:transparent;display:flex;align-items:center;justify-content:center;
+        }}
+        #emote{{transition:opacity 0.3s}}
+        img{{object-fit:contain;max-height:90vh;max-width:90vw;}}
+      </style>
+    </head>
+    <body>
+      <div id="emote">{content}</div>
+      <script>
+        async function refresh(){{
+          try{{
+            const res=await fetch(window.location.pathname+'?raw=1&_='+Date.now());
+            const text=await res.text();
+            const doc=new DOMParser().parseFromString(text,'text/html');
+            const newC=doc.querySelector('#emote').innerHTML;
+            const e=document.getElementById('emote');
+            if(e.innerHTML!==newC){{e.style.opacity=0;setTimeout(()=>{{e.innerHTML=newC;e.style.opacity=1;}},300);}}
+          }}catch(err){{console.error(err)}}
+        }}
+        setInterval(refresh,2000);
+      </script>
+    </body>
+    </html>
+    """
+________________________________________
+⚙️ Systemd-Service
+/etc/systemd/system/emote.service:
+[Unit]
+Description=Emote API Service
+After=network.target
+
+[Service]
+User=emotesvc
+Group=emotesvc
+WorkingDirectory=/opt/emote-service
+Environment="EMOTE_API_TOKEN=DEIN_GEHEIMES_TOKEN"
+ExecStart=/opt/emote-service/venv/bin/uvicorn app:app --host 127.0.0.1 --port 5000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+Dann aktivieren/starten:
+sudo systemctl daemon-reload
+sudo systemctl enable --now emote.service
+sudo systemctl status emote.service
+________________________________________
+🌐 Nginx (Reverse Proxy)
+/etc/nginx/sites-available/emote:
+server {
+    listen 80;
+    server_name _;
+
+    location /emote/ {
+        proxy_pass http://127.0.0.1:5000/emote/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection keep-alive;
+        proxy_set_header Host $host;
+    }
+
+    # Optional Startseite:
+    root /var/www/html;
+    index index.html;
+}
+Aktivieren & neu laden:
+sudo ln -s /etc/nginx/sites-available/emote /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+Jetzt ist die API unter http://SERVER_IP/emote/<user> erreichbar.
+________________________________________
+🔒 Authentifizierung
+•	POST & DELETE erfordern den Header:
+X-API-Key: DEIN_GEHEIMES_TOKEN
+•	GET (für OBS) ist öffentlich.
+________________________________________
+🔄 Nutzung
+•	Neues Emote setzen:
+curl -X POST http://SERVER_IP/emote/testuser \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: DEIN_GEHEIMES_TOKEN" \
+  -d '{"emote":"https://cdn.7tv.app/emote/01HV5N2ME00007838DQ0AM89KP/4x.gif"}'
+•	Emote löschen:
+curl -X DELETE http://SERVER_IP/emote/testuser \
+  -H "X-API-Key: DEIN_GEHEIMES_TOKEN"
+•	OBS-Browserquelle:
+http://SERVER_IP/emote/testuser
+→ lädt automatisch alle 2 s neu und blendet neue Emotes smooth ein.
+________________________________________
+🚀 Optional
+•	HTTPS aktivieren, sobald du eine Domain hast:
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d deine.domain.de
+•	Persistenz: bei Neustart sind Emotes weg → ggf. SQLite oder JSON-Datei verwenden.
+•	Mehrere Tokens: Liste oder DB, falls mehrere Bots/Clients schreiben sollen.
+________________________________________
+✅ Damit hast du einen sicheren, dynamischen Emote-Service, den dein Twitch-Bot füttert und den du direkt in OBS nutzen kannst.
+
